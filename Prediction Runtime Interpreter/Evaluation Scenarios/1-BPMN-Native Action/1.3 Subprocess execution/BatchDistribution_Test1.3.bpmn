@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" name="" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.3.0">
+  <bpmn:collaboration id="Collaboration_08a60ne">
+    <bpmn:participant id="Participant_0vx8013" name="Drug Batch Handling" processRef="DrugBatches" />
+  </bpmn:collaboration>
+  <bpmn:process id="DrugBatches" name="DrugBatches" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1o2gmnt">
+      <bpmn:lane id="Lane_05em9by" name="Laboratory Technician">
+        <bpmn:flowNodeRef>labReadyMessage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>analysisTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>discardSubProcess</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_160mw34" name="Articulated Robot">
+        <bpmn:flowNodeRef>storageTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>meetRegulationCondition</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>discardTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>placeDistributionTak</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_19az0rf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>endEvent</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_1j1nyhg" name="Quality Technician">
+        <bpmn:flowNodeRef>batchArrivalMsg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>manualInspectionTask</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>selectSampleTask</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:serviceTask id="storageTask" name="Storage in Controlled Environment" camunda:class="es.upv.pros.pvalderas.bpcontroller.server.bpmn.BPMNServiceClass">
+      <bpmn:incoming>Flow_1u5ljzc</bpmn:incoming>
+      <bpmn:outgoing>Flow_0m9vz28</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="meetRegulationCondition" name="Meet Regulations?">
+      <bpmn:extensionElements>
+        <camunda:executionListener class="es.upv.pros.pvalderas.dsl.test.pharmacy.RegulationsCondition" event="start" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_03t3gj2</bpmn:incoming>
+      <bpmn:outgoing>Flow_09nczpm</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1ui8hmi</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="discardTask" name="Discard" camunda:class="es.upv.pros.pvalderas.bpcontroller.server.bpmn.BPMNServiceClass">
+      <bpmn:incoming>Flow_1ui8hmi</bpmn:incoming>
+      <bpmn:outgoing>Flow_00y9ly2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="placeDistributionTak" name="Place for Distribution" camunda:class="es.upv.pros.pvalderas.bpcontroller.server.bpmn.BPMNServiceClass">
+      <bpmn:incoming>Flow_09nczpm</bpmn:incoming>
+      <bpmn:outgoing>Flow_14929rt</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_19az0rf">
+      <bpmn:incoming>Flow_14929rt</bpmn:incoming>
+      <bpmn:incoming>Flow_00y9ly2</bpmn:incoming>
+      <bpmn:outgoing>Flow_1u8e1gy</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="endEvent">
+      <bpmn:incoming>Flow_1u8e1gy</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="batchArrivalMsg" name="Batch Reception">
+      <bpmn:outgoing>Flow_0r2llke</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_1ugqyl0" messageRef="Message_03dgk5f" />
+    </bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="labReadyMessage" name="Laboratory Ready">
+      <bpmn:incoming>Flow_0m9vz28</bpmn:incoming>
+      <bpmn:outgoing>Flow_0y85utf</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0vbysn6" messageRef="Message_3efucv5" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_1u5ljzc" sourceRef="selectSampleTask" targetRef="storageTask" />
+    <bpmn:sequenceFlow id="Flow_0m9vz28" sourceRef="storageTask" targetRef="labReadyMessage" />
+    <bpmn:sequenceFlow id="Flow_03t3gj2" sourceRef="analysisTask" targetRef="meetRegulationCondition" />
+    <bpmn:sequenceFlow id="Flow_09nczpm" name="yes" sourceRef="meetRegulationCondition" targetRef="placeDistributionTak">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{predictedBacteria=="yes" || conditionResult=="yes"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1ui8hmi" name="no" sourceRef="meetRegulationCondition" targetRef="discardTask">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">#{predictedBacteria=="no" || conditionResult=="no"}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_00y9ly2" sourceRef="discardTask" targetRef="Gateway_19az0rf" />
+    <bpmn:sequenceFlow id="Flow_14929rt" sourceRef="placeDistributionTak" targetRef="Gateway_19az0rf" />
+    <bpmn:sequenceFlow id="Flow_1u8e1gy" sourceRef="Gateway_19az0rf" targetRef="endEvent" />
+    <bpmn:sequenceFlow id="Flow_1d41uoh" sourceRef="manualInspectionTask" targetRef="selectSampleTask" />
+    <bpmn:sequenceFlow id="Flow_0r2llke" sourceRef="batchArrivalMsg" targetRef="manualInspectionTask" />
+    <bpmn:sequenceFlow id="Flow_0y85utf" sourceRef="labReadyMessage" targetRef="analysisTask" />
+    <bpmn:serviceTask id="manualInspectionTask" name="Manual Inspection" camunda:class="es.upv.pros.pvalderas.dsl.test.pharmacy.ManualInspection">
+      <bpmn:incoming>Flow_0r2llke</bpmn:incoming>
+      <bpmn:outgoing>Flow_1d41uoh</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="selectSampleTask" name="Select Sample">
+      <bpmn:incoming>Flow_1d41uoh</bpmn:incoming>
+      <bpmn:outgoing>Flow_1u5ljzc</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="analysisTask" name="Stability and Purity Analysis" camunda:class="es.upv.pros.pvalderas.bpcontroller.server.bpmn.BPMNServiceClass">
+      <bpmn:incoming>Flow_0y85utf</bpmn:incoming>
+      <bpmn:outgoing>Flow_03t3gj2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:subProcess id="discardSubProcess" name="Discard Pallet">
+      <bpmn:startEvent id="Event_07lpd1a">
+        <bpmn:outgoing>Flow_054z8m7</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="Flow_054z8m7" sourceRef="Event_07lpd1a" targetRef="Activity_19zrb6a" />
+      <bpmn:serviceTask id="Activity_117uhnp" name="Discard" camunda:class="es.upv.pros.pvalderas.bpcontroller.server.bpmn.BPMNServiceClass">
+        <bpmn:incoming>Flow_096nyu2</bpmn:incoming>
+        <bpmn:outgoing>Flow_0ry7muc</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="Event_1r9k9ox">
+        <bpmn:incoming>Flow_0ry7muc</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_0ry7muc" sourceRef="Activity_117uhnp" targetRef="Event_1r9k9ox" />
+      <bpmn:sequenceFlow id="Flow_096nyu2" sourceRef="Activity_19zrb6a" targetRef="Activity_117uhnp" />
+      <bpmn:serviceTask id="Activity_19zrb6a" name="Cancel Processing" camunda:class="es.upv.pros.pvalderas.bpcontroller.server.bpmn.CancelPalletProcessing">
+        <bpmn:incoming>Flow_054z8m7</bpmn:incoming>
+        <bpmn:outgoing>Flow_096nyu2</bpmn:outgoing>
+      </bpmn:serviceTask>
+    </bpmn:subProcess>
+  </bpmn:process>
+  <bpmn:message id="Message_03dgk5f" name="batchArrival" />
+  <bpmn:message id="Message_3efucv5" name="labReady" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Collaboration_08a60ne">
+      <bpmndi:BPMNShape id="Participant_0vx8013_di" bpmnElement="Participant_0vx8013" isHorizontal="true">
+        <dc:Bounds x="160" y="40" width="870" height="730" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_1j1nyhg_di" bpmnElement="Lane_1j1nyhg" isHorizontal="true">
+        <dc:Bounds x="190" y="40" width="840" height="118" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_160mw34_di" bpmnElement="Lane_160mw34" isHorizontal="true">
+        <dc:Bounds x="190" y="158" width="840" height="222" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_05em9by_di" bpmnElement="Lane_05em9by" isHorizontal="true">
+        <dc:Bounds x="190" y="380" width="840" height="390" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0zb2ibs_di" bpmnElement="storageTask">
+        <dc:Bounds x="470" y="230" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1mnn9q0_di" bpmnElement="meetRegulationCondition" isMarkerVisible="true">
+        <dc:Bounds x="715" y="245" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="657" y="216" width="65" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1001rvm_di" bpmnElement="discardTask">
+        <dc:Bounds x="780" y="290" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1fvslyo_di" bpmnElement="placeDistributionTak">
+        <dc:Bounds x="780" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_19az0rf_di" bpmnElement="Gateway_19az0rf" isMarkerVisible="true">
+        <dc:Bounds x="895" y="245" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0jgjdkc_di" bpmnElement="endEvent">
+        <dc:Bounds x="972" y="252" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1pyt6l7_di" bpmnElement="batchArrivalMsg">
+        <dc:Bounds x="262" y="82" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="240" y="125" width="81" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_181hwa1_di" bpmnElement="labReadyMessage">
+        <dc:Bounds x="502" y="422" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="476" y="465" width="88" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0pspzyr_di" bpmnElement="manualInspectionTask">
+        <dc:Bounds x="330" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0nibi5c_di" bpmnElement="selectSampleTask">
+        <dc:Bounds x="470" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0tz6nu8_di" bpmnElement="analysisTask">
+        <dc:Bounds x="570" y="400" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0glz8e9_di" bpmnElement="discardSubProcess" isExpanded="true">
+        <dc:Bounds x="420" y="510" width="490" height="200" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_07lpd1a_di" bpmnElement="Event_07lpd1a">
+        <dc:Bounds x="460" y="592" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_1r9k9ox_di" bpmnElement="Event_1r9k9ox">
+        <dc:Bounds x="832" y="592" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_14symsc_di" bpmnElement="Activity_117uhnp">
+        <dc:Bounds x="690" y="570" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0a8qcrd_di" bpmnElement="Activity_19zrb6a">
+        <dc:Bounds x="530" y="570" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_054z8m7_di" bpmnElement="Flow_054z8m7">
+        <di:waypoint x="496" y="610" />
+        <di:waypoint x="530" y="610" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0ry7muc_di" bpmnElement="Flow_0ry7muc">
+        <di:waypoint x="790" y="610" />
+        <di:waypoint x="832" y="610" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_096nyu2_di" bpmnElement="Flow_096nyu2">
+        <di:waypoint x="630" y="610" />
+        <di:waypoint x="690" y="610" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1u5ljzc_di" bpmnElement="Flow_1u5ljzc">
+        <di:waypoint x="520" y="140" />
+        <di:waypoint x="520" y="230" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0m9vz28_di" bpmnElement="Flow_0m9vz28">
+        <di:waypoint x="520" y="310" />
+        <di:waypoint x="520" y="422" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03t3gj2_di" bpmnElement="Flow_03t3gj2">
+        <di:waypoint x="670" y="440" />
+        <di:waypoint x="690" y="440" />
+        <di:waypoint x="690" y="270" />
+        <di:waypoint x="715" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_09nczpm_di" bpmnElement="Flow_09nczpm">
+        <di:waypoint x="740" y="245" />
+        <di:waypoint x="740" y="210" />
+        <di:waypoint x="780" y="210" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="746" y="183" width="18" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ui8hmi_di" bpmnElement="Flow_1ui8hmi">
+        <di:waypoint x="740" y="295" />
+        <di:waypoint x="740" y="330" />
+        <di:waypoint x="780" y="330" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="748" y="333" width="13" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_00y9ly2_di" bpmnElement="Flow_00y9ly2">
+        <di:waypoint x="880" y="330" />
+        <di:waypoint x="920" y="330" />
+        <di:waypoint x="920" y="295" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14929rt_di" bpmnElement="Flow_14929rt">
+        <di:waypoint x="880" y="210" />
+        <di:waypoint x="920" y="210" />
+        <di:waypoint x="920" y="245" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1u8e1gy_di" bpmnElement="Flow_1u8e1gy">
+        <di:waypoint x="945" y="270" />
+        <di:waypoint x="972" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1d41uoh_di" bpmnElement="Flow_1d41uoh">
+        <di:waypoint x="430" y="100" />
+        <di:waypoint x="470" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0r2llke_di" bpmnElement="Flow_0r2llke">
+        <di:waypoint x="298" y="100" />
+        <di:waypoint x="330" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0y85utf_di" bpmnElement="Flow_0y85utf">
+        <di:waypoint x="538" y="440" />
+        <di:waypoint x="570" y="440" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

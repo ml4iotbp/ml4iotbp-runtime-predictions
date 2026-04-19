@@ -1,0 +1,8 @@
+Q1. When are predictions triggered during the process execution?
+Q2. What type of schedule is used (event-based, periodic, or both)?
+Q3. Which process elements define the start and end of the prediction interval?
+Q4. How frequently are predictions executed?
+Q5. What is the goal of the prediction (i.e., what is being predicted)?
+Q6. What condition must be satisfied to trigger actions?
+Q7. How do the actions affect the running process instance?
+Q8. What type(s) of actions are executed (e.g., native, administrative, direct)?

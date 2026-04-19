@@ -1,0 +1,70 @@
+# correct with little error en action property: 9
+dataset:
+  batch_regulation_ds:
+    data:
+      - f_manual_inspection_values:
+        - BI: batchId
+        - TH: hardness
+        - VI: integrity
+        - VC: visibleContamination
+      - MIS: f_manual_inspection_delay
+      - MID: f_manual_inspection_duration
+      - SSD: f_sample_selection_duration
+      - RCT: f_avg_reception_temp
+      - RCH: f_avg_reception_hum
+      - RCL: f_avg_reception_light
+      - CEW: f_waiting_duration
+      - CET: f_avg_cont_env_temp
+      - CEH: f_avg_cont_env_hum
+      - CEL: f_avg_cont_env_light
+    label: 
+      R: label_meet_regulation
+    train-ratio: 0.7
+    val-ratio: 0.15
+    test-ratio: 0.15
+
+models:
+  ml_batch_meets_regulations:
+    type: Classification
+    algorithm: Random Forest
+    dataset: batch_regulation_ds
+    hyperparameters:
+      n_estimators: 250
+      max_depth: 12
+    training:
+      type: Batch
+      metrics:
+        - f1
+        - roc_auc
+
+runtimePredictions:
+  predictDistribution:
+    model: ml_regulation_prediction
+    trigger:
+      periodic:
+        every: "40s"
+        from:
+          elementId: storageControlledEnvTask
+          eventType: start
+        until:
+          elementId: analysisTask
+          eventType: start
+    decision:
+      aggregated: 
+        operator: AND
+        conditions:
+          - field: PredictedClass
+            operator: EQ
+            value: "yes" 
+          - field: Probability
+            operator: GTE
+            value: 0.70 
+      onTrue:
+        native:
+          - action: Set Variable
+            name: regulations
+            value: "yes"
+        direct:
+          - operation: Activate
+            name: placeForDistribution #<-- this should be element-id instead of name
+ 
