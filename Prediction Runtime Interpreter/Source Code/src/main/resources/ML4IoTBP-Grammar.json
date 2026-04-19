@@ -65,13 +65,22 @@
         "^[A-Za-z_][A-Za-z0-9_-]+$":{
           "type": "object",
           "additionalProperties": false,
+          "required":["model","trigger","decision"],
           "properties":{
              "model": { "type": "string", "minLength": 1 },
              "trigger":{
                 "type": "object",
                 "additionalProperties": false,
+                "required":["type"],
                 "properties":{
-                  "type": { "type": "string", "minLength": 1 },
+                  "type": { "type": "string", "enum":["Periodic","EventBased"] },
+                  "event": { 
+                      "type": "object",
+                      "additionalProperties": false,
+                      "patternProperties": {
+                        "^[A-Za-z_][A-Za-z0-9_-]+$":{ "type": "string", "minLength": 1 }
+                      }
+                  },
                   "every": { "type": "string", "minLength": 1 },
                   "from": { 
                       "type": "object",
@@ -87,30 +96,68 @@
                         "^[A-Za-z_][A-Za-z0-9_-]+$":{ "type": "string", "minLength": 1 }
                       }
                   }
-                }
+                },
+                "allOf": [
+                  {
+                    "if": { "properties": { "type": { "const": "Periodic" } } },
+                    "then": {
+                      "required": ["every","from","to"],
+                      "not": { "required": ["event"] } 
+                    }
+                  },
+                  {
+                    "if": { "properties": { "type": { "const": "EventBased" } } },
+                    "then": {
+                      "required": ["event"],
+                      "not": { "required": ["every","from","to"] } 
+                    }
+                  }
+                ]
              },
              "inputFeatures":{
                 "type": "array",
                 "items": {"type":"string", "pattern":"^[A-Za-z_][A-Za-z0-9_-]+$" }
              },
-             "condition":{"$ref": "#/definitions/conditionPrediction"}
+             "decision":{"$ref": "#/definitions/decision"}
           }
         }
       }
     },
 
-    "conditionPrediction":{
+    "decision":{
       "type": "object",
       "additionalProperties": false,
-      "required": ["operator","threshold","positive-class"],
       "properties":{
-        "operator":{ "type": "string", "enum": [">", ">=", "=", "<", "<="]},
-        "threshold":{ "type": "number", "minimum": 0, "maximum": 1},
         "onTrue":{"$ref": "#/definitions/actionPrediction"},
         "onFalse":{"$ref": "#/definitions/actionPrediction"},
-        "positive-class":{"type": "string", "minLength": 1}
-      }
-      
+        "simple":{"$ref": "#/definitions/simpleDecision"},
+        "aggregated":{"$ref": "#/definitions/aggregatedDecision"}
+      },
+      "oneOf": [
+        {"required":["simple"],"not": { "required": ["aggregated"] }},
+        {"required":["aggregated"],"not": { "required": ["simple"] }}
+      ]
+    },
+
+    "simpleDecision":{
+        "type": "object",
+        "additionalProperties": false,
+        "properties":{
+          "operator":{ "type": "string", "enum": ["EQ", "NEQ", "GT", "GTE", "LT","LTE","IN","NOT_IN"]},
+          "field":{ "type": "string", "enum": ["PredictedClass", "Probability", "Confidence", "Score"]},
+          "value":{"oneOf":[{"type":"string", "minLength":1},{ "type": "number"},{ "type": "boolean"}]}
+        }
+    },
+
+    "aggregatedDecision":{
+        "type": "object",
+        "additionalProperties": false,
+        "properties":{
+          "operator":{ "type": "string", "enum": ["AND", "OR"]},
+          "conditions":{"type":"array", "items":{"oneOf": [ {"$ref": "#/definitions/simpleDecision"}, {"$ref": "#/definitions/aggregatedDecision"}]}}
+                                                 
+
+        }
     },
 
     "actionPrediction":{
@@ -131,24 +178,59 @@
         "action":{ "type": "string", "enum": ["Set Variable", "Set Message", "Set Signal", "Execute SubProcess"]},
         "name":{ "type": "string", "minLength": 1 },
         "value":{ "type": "string", "minLength": 1 },
-        "processId":{ "type": "string", "minLength": 1 }
-      }
+        "processId":{ "type": "string", "minLength": 1 },
+        "priority":{ "type": "integer", "min": 0 }
+      },
+      "allOf": [
+            { 
+              "if": {"properties":{ "action": {"const": "Execute SubProcess" }}},
+              "then":{
+                "required": ["processId"], 
+                "not": { "required": ["name","value"] } 
+              }
+            },
+            { 
+              "if": {"properties":{ "action": {"const": "Set Variable" }}},
+              "then":{
+                "required": ["name","value"], 
+                "not": { "required": ["processId"] } 
+              }
+            },
+            { 
+              "if": {"properties":{ "action": {"const": "Set Message" }}},
+              "then":{
+                "required": ["name"], 
+                "not": { "required": ["processId","value"] } 
+              }
+            },
+            { 
+              "if": {"properties":{ "action": {"const": "Set Signal" }}},
+              "then":{
+                "required": ["name"], 
+                "not": { "required": ["processId","value"] } 
+              }
+            }
+        ]
     },
 
     "directActionPrediction":{
       "type": "object",
       "additionalProperties": false,
+      "required":["operation","element-id"],
       "properties":{
         "operation":{ "type": "string", "enum": ["Activate", "Cancel"]},
-        "element-id":{ "type": "string", "minLength": 1 }
+        "element-id":{ "type": "string", "minLength": 1 },
+        "priority":{ "type": "integer", "min": 0 }
       }
     },
 
     "adminActionPrediction":{
       "type": "object",
       "additionalProperties": false,
+      "required":["task"],
       "properties":{
-         "task":{ "type": "string", "enum": ["Suspension", "Resumption", "Cancellation", "Termination"]}
+         "task":{ "type": "string", "enum": ["Suspension", "Resumption", "Cancellation", "Termination"]},
+         "priority":{ "type": "integer", "min": 0 }
       }
     },
 
