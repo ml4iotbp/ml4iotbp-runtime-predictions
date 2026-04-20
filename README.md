@@ -1,4 +1,4 @@
-# A DSL for Supporting the Integration of Runtime Machine Learning Predictions into IoT-Enhanced BPs
+# A DSL and Runtime Interpreter for Supporting the Integration of Runtime Machine Learning Predictions into IoT-Enhanced BPs
 
 The integration of Machine Learning (ML) into IoT-Enhanced Business Processes (BPs) offers significant opportunities to enable predictive and adaptive process behavior. However, existing approaches provide limited support for systematically incorporating predictions into IoT-Enhanced BPs at runtime. This paper addresses this challenge from a Model-Driven Engineering perspective. In particular, we extend a previously proposed Domain-Specific Language (DSL) with constructs that enable the declarative specification of runtime prediction behavior. The proposed extensions allow users to define when ML predictions should be triggered, how runtime data is collected and aligned with training data, and how prediction outcomes influence process execution through different categories of actions.
 
